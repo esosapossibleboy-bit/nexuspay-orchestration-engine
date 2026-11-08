@@ -1,0 +1,19 @@
+# 📦 Ignore heavy local node modules toolboxes
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# 🎨 Ignore compiled frontend build production folders
+frontend/dist/
+
+# 💾 Ignore live local database states (Keep transactional information private!)
+backend/nexuspayVault.db
+backend/medledgerVault.db
+backend/trustgridVault.db
+
+# ⚙️ System Logs & Configurations Cache
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.local
