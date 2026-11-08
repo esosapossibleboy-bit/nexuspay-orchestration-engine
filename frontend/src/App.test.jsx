@@ -22,6 +22,9 @@ global.fetch = vi.fn((url, options) => {
       amount: 150,
       currency: 'USD',
       status: 'CHARGED',
+      gatewayUsed: 'Stripe',
+      feeCharged: 4.35,
+      failoverTriggered: false,
       isDuplicateCachedResponse: false
     })
   });
@@ -33,13 +36,16 @@ test('Idempotent Ingestion: Executing a payment charge should render an alert ba
   // Fill out financial forms amounts field
   fireEvent.change(screen.getByPlaceholderText(/e.g. 150/i), { target: { value: '150' } });
 
-  // Click the execute payment charge action button
-  fireEvent.click(screen.getByText(/Execute Safe Charge Transaction/i));
+  // Hunt for our upgraded orchestrated button routing execution text link
+  fireEvent.click(screen.getByText(/Execute Orchestrated Charge Routing/i));
 
   // Verify the transaction notification banner pops open onto the screen
-  const successBanner = await screen.findByText(/SUCCESS:/i);
+  const successBanner = await screen.findByText(/CORE_LOG:/i);
   expect(successBanner).toBeInTheDocument();
-  expect(screen.getByText(/ch_mock999abc/i)).toBeInTheDocument();
+  
+  // 🌟 FIX: Use findAllByText since the mock charge token maps to both the alert wall and history rows!
+  const chargeTokens = await screen.findAllByText(/ch_mock999abc/i);
+  expect(chargeTokens.length).toBe(2); // Confirms token printed on both the alert banner and tracking ledger!
 });
 
 test('PCI-DSS Cryptographic Loop: Card number encryption inside TokenVault child component must output a hex token', async () => {

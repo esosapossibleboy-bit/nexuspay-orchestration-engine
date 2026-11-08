@@ -40,3 +40,44 @@ test('FinTech Idempotency Challenge: Duplicate checkout requests must return the
   expect(secondRequest.body.chargeId).toBe(originalChargeId); // 🔒 Confirms double-charging is structurally impossible!
   expect(secondRequest.body.isDuplicateCachedResponse).toBe(true); // Verifies it loaded the cached safety ticket
 });
+
+test('Orchestration Gate Pass: Processing an order must calculate cost weights and attach settlement parameters', async () => {
+  const customKey = 'idemp_key_orchestrate_77';
+
+  // Act: Submit an order payload to our brand-new orchestration route slot
+  const response = await request(app)
+    .post('/api/charges/orchestrate')
+    .set('Idempotency-Key', customKey)
+    .send({
+      amount: 600, // Large amount should dynamically trigger Adyen preferential bulk rates!
+      currency: 'EUR',
+      cardToken: 'tok_visa_5555'
+    });
+
+  // Assert: Verify it calculated costs and successfully routed to Adyen
+  expect(response.status).toBe(200);
+  expect(response.body.status).toBe('SETTLED');
+  expect(response.body.gatewayUsed).toBe('Adyen'); // Cost optimization passed!
+  expect(response.body.feeCharged).toBe(21); // 3.5% of 600 check
+  expect(response.body.failoverTriggered).toBe(false);
+});
+
+test('Reconciliation Ingestion Gate: Submitting balanced double-entries must pass checks and release locks cleanly', async () => {
+  const reconciliationKey = 'idemp_key_rec_year3';
+
+  // Act: Post a perfectly balanced transaction batch to our new accounting path slot
+  const response = await request(app)
+    .post('/api/ledger/reconcile')
+    .set('Idempotency-Key', reconciliationKey)
+    .send({
+      lockAccountId: 'acc_merchant_uber_01',
+      debits: [{ accountId: 'acc_cash_vault', amount: 300 }],
+      credits: [{ accountId: 'acc_accounts_receivable', amount: 300 }] // Perfectly Balanced!
+    });
+
+  // Assert: Verify it maps to a successful balanced state and prints out 200 OK
+  expect(response.status).toBe(200);
+  expect(response.body.status).toBe('RECONCILED');
+  expect(response.body.lockAccountId).toBe('acc_merchant_uber_01');
+  expect(response.body.snapshot.entries.length).toBe(2);
+});
